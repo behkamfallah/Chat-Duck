@@ -106,14 +106,6 @@ DOCUMENT_PROMPT = PromptTemplate.from_template(
     """
 )
 
-CONDENSE_QUESTION_PROMPT = PromptTemplate.from_template(
-    """Given the following conversation and a follow up question, rephrase the follow up question to be a standalone question, in its original language.
-
-    Chat History:
-    {chat_history}
-    Follow Up Input: {question}
-    """
-)
 
 def _combine_documents(
     docs, document_prompt=DOCUMENT_PROMPT, document_separator="\n\n"
