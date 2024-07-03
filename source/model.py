@@ -52,7 +52,6 @@ def chunk_data(text, chunk_size=256, chunk_overlap=64):
 
 # Chunk data using above function.
 chunks = chunk_data(data)
-print(chunks)
 
 embeddings = OpenAIEmbeddings(model="text-embedding-3-small", openai_api_key=openai_api_key)
 
@@ -61,7 +60,6 @@ client = Elasticsearch(
   api_key=elastic_api_key
 )
 resp = client.indices.delete(index="workplace_index", ignore_unavailable=True)
-print(resp)
 
 my_documents = ElasticsearchStore.from_documents(
     chunks,
