@@ -3,10 +3,6 @@ import time
 from dotenv import load_dotenv, find_dotenv
 from langchain_openai import OpenAIEmbeddings
 from typing import Any, Dict, Iterable
-from elasticsearch.helpers import bulk
-from langchain_community.embeddings import DeterministicFakeEmbedding
-from langchain_core.documents import Document
-from langchain_core.embeddings import Embeddings
 from langchain_elasticsearch import ElasticsearchRetriever
 from langchain_elasticsearch import ElasticsearchStore
 from langchain_openai import ChatOpenAI
@@ -15,11 +11,15 @@ from langchain.prompts import ChatPromptTemplate, PromptTemplate
 from langchain.schema.output_parser import StrOutputParser
 from langchain.schema import format_document
 from elasticsearch import Elasticsearch
+from langchain_elasticsearch import DenseVectorStrategy
+
 
 # Load .env file and API Keys
 load_dotenv(find_dotenv(), override=True)
 openai_api_key = os.environ.get("OPENAI_API_KEY")
 elastic_api_key = os.environ.get("ELASTIC_API_KEY")
+elastic_cloud_id = os.environ.get("ELASTIC_CLOUD_ID")
+elastic_end_point = os.environ.get("ELASTIC_SEARCH_END_POINT")
 
 
 # Load the PDF in this section.
@@ -34,7 +34,7 @@ def load_document(file):
 # for each page of the PDF with the
 # page's content and some metadata
 # about where in the document the text came from.
-data = load_document("../data/cc.pdf")
+data = load_document("../data/ccc.pdf")
 
 # To show how many pages the PDF has.
 print(f"Pdf has {len(data)} pages.")
@@ -49,41 +49,59 @@ def chunk_data(text, chunk_size=256, chunk_overlap=64):
     all_splits = text_splitter.split_documents(text)
     return all_splits
 
-elastic_cloud_id = "2815e5811bbe46c4bab9d804d6754964:dXMtY2VudHJhbDEuZ2NwLmNsb3VkLmVzLmlvJDk1Y2RjNDdiNDUzNDQ2NDlhNDM0NTZkYzI2ZDI3ZjBhJGIwNWMwMDAxZGY3NTQwZTM5NDMwODBiODgxZjY5ODA2"
-
-client = Elasticsearch(
-  "https://95cdc47b45344649a43456dc26d27f0a.us-central1.gcp.cloud.es.io:443",
-  api_key=elastic_api_key
-)
 
 # Chunk data using above function.
 chunks = chunk_data(data)
+print(chunks)
 
-print(chunks[1])
 embeddings = OpenAIEmbeddings(model="text-embedding-3-small", openai_api_key=openai_api_key)
 
-resp = client.indices.delete(
-    index="workplace_index",
+client = Elasticsearch(
+  hosts=elastic_end_point,
+  api_key=elastic_api_key
 )
+resp = client.indices.delete(index="workplace_index", ignore_unavailable=True)
 print(resp)
 
-documents = ElasticsearchStore.from_documents(
+my_documents = ElasticsearchStore.from_documents(
     chunks,
-    embeddings,
+    embedding=embeddings,
     index_name="workplace_index",
     es_cloud_id=elastic_cloud_id,
     es_api_key=elastic_api_key,
+    distance_strategy="COSINE",
+    strategy=DenseVectorStrategy(hybrid=True),
+    vector_query_field='dense_vector',
+    query_field='texts',
 )
 
 
-def metadata_func(record: dict, metadata: dict) -> dict:
-    metadata["source"] = record.get("source")
-    metadata["page"] = record.get("page")
-    metadata["start_index"] = record.get("start_index")
-    return metadata
+def hybrid_query(search_query: str) -> Dict:
+    vector = embeddings.embed_query(search_query)  # same embeddings as for indexing
+    return {
+        "query": {
+            "match": {
+                'texts': search_query,
+            },
+        },
+        "knn": {
+            "field": 'dense_vector',
+            "query_vector": vector,
+            "k": 5,
+            "num_candidates": 10,
+        },
+        "rank": {"rrf": {}},
+    }
 
 
-retriever = documents.as_retriever()
+hybrid_retriever = ElasticsearchRetriever.from_es_params(
+    index_name='workplace_index',
+    body_func=hybrid_query,
+    content_field='texts',
+    url=elastic_end_point,
+    api_key=elastic_api_key
+)
+
 
 llm = ChatOpenAI(model='gpt-3.5-turbo', temperature=0.1)
 
@@ -107,6 +125,13 @@ DOCUMENT_PROMPT = PromptTemplate.from_template(
 )
 
 
+def doc_format(list_of_document_objects):
+    for document in list_of_document_objects:
+        document.metadata['source'] = document.metadata['_source']['metadata']['source']
+        document.metadata['page'] = document.metadata['_source']['metadata']['page']
+    return list_of_document_objects
+
+
 def _combine_documents(
     docs, document_prompt=DOCUMENT_PROMPT, document_separator="\n\n"
 ):
@@ -115,7 +140,7 @@ def _combine_documents(
 
 
 _context = {
-    "context": retriever | _combine_documents,
+    "context": hybrid_retriever | doc_format | _combine_documents,
     "question": RunnablePassthrough(),
 }
 
@@ -124,17 +149,14 @@ chain = _context | ANSWER_PROMPT | llm | StrOutputParser()
 i = 1
 while True:
     print('Write Quit or Exit to stop.')
-    q = input(f'Question #{i}: ')
+    user_query = input(f'Question #{i}: ')
     i = i + 1
-    if q.lower() in ['quit', 'exit']:
+    if user_query.lower() in ['quit', 'exit']:
         print('Exiting...')
         time.sleep(4)
         break
 
-    try:
-        ans = chain.invoke(q)
-    except:
-        continue
+    ai_answer = chain.invoke(user_query)
 
-    print(f'\nAnswer: {ans}')
+    print(f'\nAnswer: {ai_answer}')
     print(f'\n {"-" * 50} \n')
