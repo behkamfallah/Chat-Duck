@@ -1,5 +1,6 @@
 ### About the Project
 🦆Chat Duck🦆
+
 This reposirtory is a 'Chat-with-your-PDF' project using Elastic Search and RAG.
 
 ### Prerequisites
