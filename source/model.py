@@ -1,5 +1,7 @@
 import os
 import time
+from document_loader import LoadDocument
+from chunker import ChunkData
 from dotenv import load_dotenv, find_dotenv
 from langchain_openai import OpenAIEmbeddings
 from typing import Any, Dict, Iterable
@@ -19,39 +21,20 @@ load_dotenv(find_dotenv(), override=True)
 openai_api_key = os.environ.get("OPENAI_API_KEY")
 elastic_api_key = os.environ.get("ELASTIC_API_KEY")
 elastic_cloud_id = os.environ.get("ELASTIC_CLOUD_ID")
-elastic_end_point = os.environ.get("ELASTIC_SEARCH_END_POINT")
+elastic_end_point = os.environ.get("ELASTIC_END_POINT")
 
 
-# Load the PDF in this section.
-def load_document(file):
-    from langchain_community.document_loaders import PyPDFLoader
-    print(f"Loading {file}")
-    data_from_pdf = PyPDFLoader(file).load()
-    return data_from_pdf
-
-
-# data is a list.  Each element is a LangChain Document
-# for each page of the PDF with the
-# page's content and some metadata
-# about where in the document the text came from.
-data = load_document("../data/ccc.pdf")
+# 'data' is a list of LangChain 'Document's.
+# Each Document is page of the PDF with the
+# page's content and some metadata about where
+# in the pdf the text came from.
+data = LoadDocument("../data/ccc.pdf").content
 
 # To show how many pages the PDF has.
 print(f"Pdf has {len(data)} pages.")
 
-
-# Split data into chunks.
-# Chunk size is by default 256 and Chunk overlap is 64.
-def chunk_data(text, chunk_size=256, chunk_overlap=64):
-    from langchain_text_splitters import RecursiveCharacterTextSplitter
-    text_splitter = RecursiveCharacterTextSplitter(chunk_size=chunk_size, chunk_overlap=chunk_overlap,
-                                                   add_start_index=True, separators=['\n\n', '\n', ' ', ''])
-    all_splits = text_splitter.split_documents(text)
-    return all_splits
-
-
-# Chunk data using above function.
-chunks = chunk_data(data)
+# Chunk data
+chunks = ChunkData(data, 256, 64).get_splits()
 
 embeddings = OpenAIEmbeddings(model="text-embedding-3-small", openai_api_key=openai_api_key)
 
