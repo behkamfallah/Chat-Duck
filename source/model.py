@@ -62,28 +62,6 @@ es = ELASTICSEARCHHANDLER(es_client=client, index_name=index_name, embedding=emb
 
 # Create Index
 es.create_index()'''
-# Chunk data
-chunks = ChunkData(data, 256, 64).get_splits()
-
-embeddings = OpenAIEmbeddings(model="text-embedding-3-small", openai_api_key=openai_api_key)
-
-client = Elasticsearch(
-  hosts=elastic_end_point,
-  api_key=elastic_api_key
-)
-resp = client.indices.delete(index="workplace_index", ignore_unavailable=True)
-
-my_documents = ElasticsearchStore.from_documents(
-    chunks,
-    embedding=embeddings,
-    index_name="workplace_index",
-    es_cloud_id=elastic_cloud_id,
-    es_api_key=elastic_api_key,
-    distance_strategy="COSINE",
-    strategy=DenseVectorStrategy(hybrid=True),
-    vector_query_field='dense_vector',
-    query_field='texts',
-)
 
 
 def hybrid_query(search_query: str) -> Dict:
