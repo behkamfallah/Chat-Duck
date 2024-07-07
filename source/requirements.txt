@@ -10,3 +10,4 @@ pypdf
 langchain-elasticsearch
 elasticsearch
 streamlit
+elasticsearch

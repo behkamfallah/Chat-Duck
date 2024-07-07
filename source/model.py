@@ -2,6 +2,9 @@ import os
 from document_loader import LoadDocument
 from chunker import ChunkData
 from elasticsearchhandler import ELASTICSEARCHHANDLER
+import time
+from document_loader import LoadDocument
+from chunker import ChunkData
 from dotenv import load_dotenv, find_dotenv
 from langchain_openai import OpenAIEmbeddings
 from typing import Any, Dict, Iterable
@@ -32,6 +35,7 @@ elastic_end_point = os.environ.get("ELASTIC_END_POINT")
 
 # Instantiate Embedding Model
 embedding_model = OpenAIEmbeddings(model="text-embedding-3-small", openai_api_key=openai_api_key)
+data = LoadDocument("../data/ccc.pdf").content
 
 # ElasticSearch Client
 client = Elasticsearch(hosts=elastic_end_point, api_key=elastic_api_key, request_timeout=30, max_retries=10,
@@ -58,6 +62,28 @@ es = ELASTICSEARCHHANDLER(es_client=client, index_name=index_name, embedding=emb
 
 # Create Index
 es.create_index()'''
+# Chunk data
+chunks = ChunkData(data, 256, 64).get_splits()
+
+embeddings = OpenAIEmbeddings(model="text-embedding-3-small", openai_api_key=openai_api_key)
+
+client = Elasticsearch(
+  hosts=elastic_end_point,
+  api_key=elastic_api_key
+)
+resp = client.indices.delete(index="workplace_index", ignore_unavailable=True)
+
+my_documents = ElasticsearchStore.from_documents(
+    chunks,
+    embedding=embeddings,
+    index_name="workplace_index",
+    es_cloud_id=elastic_cloud_id,
+    es_api_key=elastic_api_key,
+    distance_strategy="COSINE",
+    strategy=DenseVectorStrategy(hybrid=True),
+    vector_query_field='dense_vector',
+    query_field='texts',
+)
 
 
 def hybrid_query(search_query: str) -> Dict:
