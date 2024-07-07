@@ -35,7 +35,7 @@ elastic_end_point = os.environ.get("ELASTIC_END_POINT")
 
 # Instantiate Embedding Model
 embedding_model = OpenAIEmbeddings(model="text-embedding-3-small", openai_api_key=openai_api_key)
-data = LoadDocument("../data/ccc.pdf").content
+# data = LoadDocument("../data/ccc.pdf").content
 
 # ElasticSearch Client
 client = Elasticsearch(hosts=elastic_end_point, api_key=elastic_api_key, request_timeout=30, max_retries=10,
