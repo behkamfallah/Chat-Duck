@@ -1,113 +1,105 @@
 import os
-import time
+from document_loader import LoadDocument
+from chunker import ChunkData
+from elasticsearchhandler import ELASTICSEARCHHANDLER
 from dotenv import load_dotenv, find_dotenv
 from langchain_openai import OpenAIEmbeddings
 from typing import Any, Dict, Iterable
 from langchain_elasticsearch import ElasticsearchRetriever
-from langchain_elasticsearch import ElasticsearchStore
 from langchain_openai import ChatOpenAI
 from langchain.schema.runnable import RunnablePassthrough
 from langchain.prompts import ChatPromptTemplate, PromptTemplate
 from langchain.schema.output_parser import StrOutputParser
 from langchain.schema import format_document
 from elasticsearch import Elasticsearch
-from langchain_elasticsearch import DenseVectorStrategy
-
 
 # Load .env file and API Keys
 load_dotenv(find_dotenv(), override=True)
 openai_api_key = os.environ.get("OPENAI_API_KEY")
 elastic_api_key = os.environ.get("ELASTIC_API_KEY")
 elastic_cloud_id = os.environ.get("ELASTIC_CLOUD_ID")
-elastic_end_point = os.environ.get("ELASTIC_SEARCH_END_POINT")
+elastic_end_point = os.environ.get("ELASTIC_END_POINT")
 
 
-# Load the PDF in this section.
-def load_document(file):
-    from langchain_community.document_loaders import PyPDFLoader
-    print(f"Loading {file}")
-    data_from_pdf = PyPDFLoader(file).load()
-    return data_from_pdf
+# 'data' is a list of LangChain 'Document's.
+# Each Document is page of the PDF with the
+# page's content and some metadata about where
+# in the pdf the text came from.
+# data = LoadDocument("../data/MyData.pdf").get_content()
 
+# Chunk data
+# chunks = ChunkData(data, 512, 128).get_splits()
 
-# data is a list.  Each element is a LangChain Document
-# for each page of the PDF with the
-# page's content and some metadata
-# about where in the document the text came from.
-data = load_document("../data/ccc.pdf")
+# Instantiate Embedding Model
+embedding_model = OpenAIEmbeddings(model="text-embedding-3-small", openai_api_key=openai_api_key)
 
-# To show how many pages the PDF has.
-print(f"Pdf has {len(data)} pages.")
+# ElasticSearch Client
+client = Elasticsearch(hosts=elastic_end_point, api_key=elastic_api_key, request_timeout=30, max_retries=10,
+                       retry_on_timeout=True)
+# Details of Index
+index_name = "my_documents"
 
+# Each document in Index will have these 3 fields:
+text_field_name = "Text"
+metadata_name = "Metadata"
+dense_vector_field = "Embeddings"
 
-# Split data into chunks.
-# Chunk size is by default 256 and Chunk overlap is 64.
-def chunk_data(text, chunk_size=256, chunk_overlap=64):
-    from langchain_text_splitters import RecursiveCharacterTextSplitter
-    text_splitter = RecursiveCharacterTextSplitter(chunk_size=chunk_size, chunk_overlap=chunk_overlap,
-                                                   add_start_index=True, separators=['\n\n', '\n', ' ', ''])
-    all_splits = text_splitter.split_documents(text)
-    return all_splits
+# Separate text and metadata
+texts = []
+metadatas = []
+'''for chunk in chunks:
+    texts.append(chunk.page_content)
+    metadatas.append(chunk.metadata)
 
+# Define ES handler
+es = ELASTICSEARCHHANDLER(es_client=client, index_name=index_name, embedding=embedding_model,
+                          text_field=text_field_name, dense_vector_field=dense_vector_field,
+                          metadata=metadata_name, texts=texts, metadatas=metadatas)
 
-# Chunk data using above function.
-chunks = chunk_data(data)
-
-embeddings = OpenAIEmbeddings(model="text-embedding-3-small", openai_api_key=openai_api_key)
-
-client = Elasticsearch(
-  hosts=elastic_end_point,
-  api_key=elastic_api_key
-)
-resp = client.indices.delete(index="workplace_index", ignore_unavailable=True)
-
-my_documents = ElasticsearchStore.from_documents(
-    chunks,
-    embedding=embeddings,
-    index_name="workplace_index",
-    es_cloud_id=elastic_cloud_id,
-    es_api_key=elastic_api_key,
-    distance_strategy="COSINE",
-    strategy=DenseVectorStrategy(hybrid=True),
-    vector_query_field='dense_vector',
-    query_field='texts',
-)
+# Create Index
+es.create_index()'''
 
 
 def hybrid_query(search_query: str) -> Dict:
-    vector = embeddings.embed_query(search_query)  # same embeddings as for indexing
+    vector = embedding_model.embed_query(search_query)  # same embeddings as for indexing
     return {
         "query": {
             "match": {
-                'texts': search_query,
+                'Text': search_query,
             },
         },
         "knn": {
-            "field": 'dense_vector',
+            "field": 'Embeddings',
             "query_vector": vector,
             "k": 5,
-            "num_candidates": 10,
+            "num_candidates": 8,
         },
         "rank": {"rrf": {}},
     }
 
 
 hybrid_retriever = ElasticsearchRetriever.from_es_params(
-    index_name='workplace_index',
+    index_name=index_name,
     body_func=hybrid_query,
-    content_field='texts',
+    content_field=text_field_name,
     url=elastic_end_point,
     api_key=elastic_api_key
 )
 
 
+# Instantiate Language Model
 llm = ChatOpenAI(model='gpt-3.5-turbo', temperature=0.1)
 
 ANSWER_PROMPT = ChatPromptTemplate.from_template(
-    """You are an assistant for question-answering tasks. Use the following pieces of retrieved context to answer the question. If you don't know the answer, just say that you don't know. Be as verbose and educational in your response as possible. 
+    """Use the following pieces of retrieved context to answer the question. Answer the question from the retrieved text only. Be as verbose and educational in your response as possible. 
     Each passage has a SOURCE which is the title of the document. When answering, cite source name and page of the passages you are answering from below the answer, on a new line, with a prefix of "SOURCE:" and "Page:" . 
-
+    This context is retrieved from related source:
+    
     context: {context}
+
+    If and only if the question clearly states a need to a code in C programming language, 
+    then make sure you give the code snippet too. Otherwise chat or give answer as you normally do.
+    
     Question: "{question}"
     Answer:
     """
@@ -115,18 +107,17 @@ ANSWER_PROMPT = ChatPromptTemplate.from_template(
 
 DOCUMENT_PROMPT = PromptTemplate.from_template(
     """
-    ---
     Page: {page}
-    SOURCE: {source}
-    ---
+
+    Document: {source}
     """
 )
 
 
 def doc_format(list_of_document_objects):
     for document in list_of_document_objects:
-        document.metadata['source'] = document.metadata['_source']['metadata']['source']
-        document.metadata['page'] = document.metadata['_source']['metadata']['page']
+        document.metadata['source'] = document.metadata['_source'][metadata_name]['source']
+        document.metadata['page'] = document.metadata['_source'][metadata_name]['page']
     return list_of_document_objects
 
 
@@ -142,19 +133,5 @@ _context = {
     "question": RunnablePassthrough(),
 }
 
+# Define Chain
 chain = _context | ANSWER_PROMPT | llm | StrOutputParser()
-
-i = 1
-while True:
-    print('Write Quit or Exit to stop.')
-    user_query = input(f'Question #{i}: ')
-    i = i + 1
-    if user_query.lower() in ['quit', 'exit']:
-        print('Exiting...')
-        time.sleep(4)
-        break
-
-    ai_answer = chain.invoke(user_query)
-
-    print(f'\nAnswer: {ai_answer}')
-    print(f'\n {"-" * 50} \n')

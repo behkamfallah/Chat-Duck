@@ -9,3 +9,4 @@ tiktoken
 pypdf
 langchain-elasticsearch
 elasticsearch
+streamlit
