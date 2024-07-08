@@ -6,6 +6,7 @@ class ELASTICSEARCHHANDLER:
     def __init__(self, es_client, index_name: str, embedding, text_field: str,
                  dense_vector_field, metadata: str,
                  texts, metadatas):
+
         self.es_client = es_client
         self.index_name = index_name
         self.embedding = embedding
@@ -19,6 +20,7 @@ class ELASTICSEARCHHANDLER:
 
     def create_index(self):
         try:
+            print('Creating Index...')
             self.es_client.indices.create(
                 index=self.index_name,
                 mappings={

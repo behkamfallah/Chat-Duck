@@ -19,7 +19,3 @@ class LoadDocument:
 
     def get_content(self):
         return self.content
-
-# Test Code
-# data = LoadDocument("../data/ccc.pdf").content
-# print(data)

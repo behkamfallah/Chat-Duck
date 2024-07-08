@@ -28,14 +28,13 @@ elastic_end_point = os.environ.get("ELASTIC_END_POINT")
 # Each Document is page of the PDF with the
 # page's content and some metadata about where
 # in the pdf the text came from.
-# data = LoadDocument("../data/MyData.pdf").get_content()
+data = LoadDocument("../data/HY-TTC_500_IO_Driver_Manual_V3.4.1.pdf").get_content()
 
 # Chunk data
-# chunks = ChunkData(data, 512, 128).get_splits()
+chunks = ChunkData(data, 512, 128).get_splits()
 
 # Instantiate Embedding Model
 embedding_model = OpenAIEmbeddings(model="text-embedding-3-small", openai_api_key=openai_api_key)
-# data = LoadDocument("../data/ccc.pdf").content
 
 # ElasticSearch Client
 client = Elasticsearch(hosts=elastic_end_point, api_key=elastic_api_key, request_timeout=30, max_retries=10,
