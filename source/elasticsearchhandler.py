@@ -46,6 +46,7 @@ class ELASTICSEARCHHANDLER:
             self.index_data()
 
     def index_data(self, refresh: bool = True) -> None:
+        print('Indexing data...')
         self.vectors = self.embedding.embed_documents(list(self.texts))
         self.requests = [
             {
