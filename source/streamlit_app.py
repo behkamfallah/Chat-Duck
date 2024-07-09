@@ -1,8 +1,7 @@
 import streamlit as st
-import model
+import umodel
 
 # Show title and description.
-#st.title("💬 Chat Duck 🦆")
 st.title("💬 HYDAC-GPT")
 st.write(
     "Welcome to HYDAC-GPT demo version."
@@ -30,7 +29,7 @@ if prompt := st.chat_input("Type your question here."):
         st.markdown(prompt)
 
     # Generate a response
-    ai_answer = model.chain.invoke(prompt)
+    ai_answer = umodel.chain.invoke(prompt)
 
     # Display assistant response in chat message container
     with st.chat_message("HYDAC"):

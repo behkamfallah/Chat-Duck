@@ -1,10 +1,5 @@
 import os
-from document_loader import LoadDocument
-from chunker import ChunkData
 from elasticsearchhandler import ELASTICSEARCHHANDLER
-import time
-from document_loader import LoadDocument
-from chunker import ChunkData
 from dotenv import load_dotenv, find_dotenv
 from langchain_openai import OpenAIEmbeddings
 from typing import Any, Dict, Iterable
@@ -15,6 +10,12 @@ from langchain.prompts import ChatPromptTemplate, PromptTemplate
 from langchain.schema.output_parser import StrOutputParser
 from langchain.schema import format_document
 from elasticsearch import Elasticsearch
+from unstructured_client.models import shared
+from unstructured_client.models.errors import SDKError
+from unstructured.staging.base import dict_to_elements
+from langchain_core.documents import Document
+from unstructured_client import UnstructuredClient
+
 
 # Load .env file and API Keys
 load_dotenv(find_dotenv(), override=True)
@@ -22,15 +23,58 @@ openai_api_key = os.environ.get("OPENAI_API_KEY")
 elastic_api_key = os.environ.get("ELASTIC_API_KEY")
 elastic_cloud_id = os.environ.get("ELASTIC_CLOUD_ID")
 elastic_end_point = os.environ.get("ELASTIC_END_POINT")
+os.environ["UNSTRUCTURED_API_KEY"] = "Fb9iZkrLrIbRfWqt8nTTbize23FmQD"
+unstructured_api_key = os.environ.get("UNSTRUCTURED_API_KEY")
 
-# 'data' is a list of LangChain 'Document's.
-# Each Document is page of the PDF with the
-# page's content and some metadata about where
-# in the pdf the text came from.
-# data = LoadDocument("../data/HY-TTC_500_IO_Driver_Manual_V3.4.1.pdf").get_content()
+'''# client for Unstructured
+un_client = UnstructuredClient(
+    api_key_auth=unstructured_api_key,
+    # if using paid API, provide your unique API URL:
+    server_url="https://api.unstructuredapp.io/general/v0/general",
+)
 
-# Chunk data
-# chunks = ChunkData(data, 512, 128).get_splits()
+# File Loading
+path_to_pdf = "../data/HY-TTC_500_IO_Driver_Manual_V3.4.1.pdf"
+with open(path_to_pdf, "rb") as f:
+    files = shared.Files(content=f.read(), file_name=path_to_pdf,)
+
+# Creating requests
+req = shared.PartitionParameters(
+    files=files,
+    hi_res_model_name="detectron2_onnx",
+    pdf_infer_table_structure=True,
+    skip_infer_table_types=[],
+    chunking_strategy="by_title",
+    max_characters=600,
+    overlap=128,
+)
+
+# Passing Requests to Unstructured
+try:
+    resp = un_client.general.partition(req)
+    elements = dict_to_elements(resp.elements)
+except SDKError as e:
+    print(e)
+
+# tables = [el for el in elements if el.category == "Table"]
+elements = [el for el in elements if el.category != "Header"]
+'''
+# Tables edit
+'''for i in range(len(tables)):
+    try:
+        parser = etree.XMLParser(remove_blank_text=True)
+        file_obj = StringIO(tables[i].metadata.text_as_html)
+        tree = etree.parse(file_obj, parser)
+        a = etree.tostring(tree, pretty_print=True).decode()
+        tables[i].text = a
+    except:
+        pass'''
+
+'''documents = []
+for element in elements:
+    metadata = element.metadata.to_dict()
+    documents.append(Document(page_content=element.text, metadata=metadata))'''
+
 
 # Instantiate Embedding Model
 embedding_model = OpenAIEmbeddings(model="text-embedding-3-small", openai_api_key=openai_api_key)
@@ -49,7 +93,7 @@ dense_vector_field = "Embeddings"
 # Separate text and metadata
 texts = []
 metadatas = []
-'''for chunk in chunks:
+'''for chunk in documents:
     texts.append(chunk.page_content)
     metadatas.append(chunk.metadata)
 
@@ -59,7 +103,8 @@ es = ELASTICSEARCHHANDLER(es_client=client, index_name=index_name, embedding=emb
                           metadata=metadata_name, texts=texts, metadatas=metadatas)
 
 # Create Index
-es.create_index()'''
+es.create_index()
+'''
 
 
 def hybrid_query(search_query: str) -> Dict:
@@ -91,8 +136,8 @@ llm = ChatOpenAI(model='gpt-4o', temperature=0.1)
 
 ANSWER_PROMPT = ChatPromptTemplate.from_template(
     """Use the following pieces of retrieved context to answer the question. Answer the question from the retrieved text only. Use exact technical names from retrieved texts and dont change them in your answer. For example
-    if a technical name is IO_PWM_SetDuty, use it as it is and don't change it to IO_PWM_SetDutyCycle. Be as verbose and educational in your response as possible. 
-    Each passage has a SOURCE which is the title of the document. When answering, cite source name and page of the passages you are answering from below the answer, on a new line, with a prefix of "SOURCE:" and "Page:" . 
+    if a technical name is IO_PWM_SetDuty, use it as it is and don't change it to IO_PWM_SetDutyCycle. Don't makeup names. Be as verbose and educational in your response as possible. 
+    Each passage has a SOURCE which is the title of the document. When answering, cite source names and pages of the passages you are using for answering, on a new line, with a prefix of "SOURCE:" and "Page:" . 
 
     context: {context}
 
@@ -115,8 +160,8 @@ DOCUMENT_PROMPT = PromptTemplate.from_template(
 
 def doc_format(list_of_document_objects):
     for document in list_of_document_objects:
-        document.metadata['source'] = document.metadata['_source'][metadata_name]['source']
-        document.metadata['page'] = document.metadata['_source'][metadata_name]['page']
+        document.metadata['source'] = document.metadata['_source'][metadata_name]['filename']
+        document.metadata['page'] = document.metadata['_source'][metadata_name]['page_number']
     return list_of_document_objects
 
 

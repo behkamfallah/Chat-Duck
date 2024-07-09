@@ -11,3 +11,20 @@ langchain-elasticsearch
 elasticsearch
 streamlit
 elasticsearch
+unstructured-client
+
+
+ANSWER_PROMPT = ChatPromptTemplate.from_template(
+    """Use the following pieces of retrieved context to answer the question. Answer the question from the retrieved text only. Use exact technical names from retrieved texts and dont change them in your answer. For example
+    if a technical name is IO_PWM_SetDuty, use it as it is and don't change it to IO_PWM_SetDutyCycle. Don't makeup names. Be as verbose and educational in your response as possible.
+    Each passage has a SOURCE which is the title of the document. When answering, cite source name and page of the passages you are answering from below the answer, on a new line, with a prefix of "SOURCE:" and "Page:" .
+
+    context: {context}
+
+    If and only if the question clearly states a need to a code in C programming language,
+    then make sure you give the code snippet too. Otherwise chat or give answer as you normally do.
+
+    Question: "{question}"
+    Answer:
+    """
+)
