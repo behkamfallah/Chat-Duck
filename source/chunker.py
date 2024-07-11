@@ -11,13 +11,13 @@ class ChunkData:
         self.chunk_overlap = chunk_overlap
         self.text_splitter = RecursiveCharacterTextSplitter(chunk_size=self.chunk_size, chunk_overlap=self.chunk_overlap,
                                                             add_start_index=True, separators=['\n\n', '\n', ' ', ''])
-        print('Data Chunked.')
-
-    def get_chunk_size(self):
-        return self.chunk_size
-
-    def get_chunk_overlap(self):
-        return self.chunk_overlap
 
     def get_splits(self):
-        return self.text_splitter.split_documents(self.text)
+        try:
+            splits = self.text_splitter.split_documents(self.text)
+        except:
+            print('Error while splitting.')
+            return False
+        else:
+            print('Chunked successfully.')
+            return splits

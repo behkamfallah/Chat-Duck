@@ -1,11 +1,15 @@
 import streamlit as st
-import umodel
+import enterprise_model
+import light_model
+from light_model import pc_client
 
 # Show title and description.
 st.title("💬 HYDAC-GPT")
 st.write(
-    "Welcome to HYDAC-GPT demo version."
+    "Welcome to HYDAC-GPT! Ask any technical question!"
 )
+selected_model = st.selectbox(label='Select your preferred model.', index=0, placeholder='Light or Enterprise',
+                              options=('Light', 'Enterprise'))
 
 # Create a session state variable to store the chat history. This ensures that the
 # messages persist across reruns.
@@ -28,11 +32,18 @@ if prompt := st.chat_input("Type your question here."):
     with st.chat_message("user"):
         st.markdown(prompt)
 
-    # Generate a response
-    ai_answer = umodel.chain.invoke(prompt)
+    if selected_model == 'Light':
+        # Generate a response
+        ai_answer = light_model.chain.invoke({'context': "\n\n".join(pc_client.vector_search(query=prompt)),
+                                              'q': prompt}).content
+    elif selected_model == 'Enterprise':
+        ai_answer = enterprise_model.chain.invoke(prompt)
+    else:
+        ai_answer = "Error!"
 
     # Display assistant response in chat message container
-    with st.chat_message("HYDAC"):
+    with st.chat_message("HYDAC-GPT"):
+        st.markdown(selected_model)
         st.markdown(ai_answer)
 
-    st.session_state.messages.append({"role": "assistant", "content": ai_answer})
+    st.session_state.messages.append({"role": "HYDAC-GPT", "content": ai_answer})

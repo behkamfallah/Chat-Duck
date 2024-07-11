@@ -38,12 +38,13 @@ class ELASTICSEARCHHANDLER:
                     }
                 },
             )
-        except:
-            print('Could not Create Index!')
+        except Exception as error:
+            print(error)
+            print('Could not Create Index!, There is an index with the same name. Will try to overwrite.')
         else:
             print('Index created successfully.')
         finally:
-            self.index_data()
+            self.index_data()  # It will automatically try to index data
 
     def index_data(self, refresh: bool = True) -> None:
         print('Indexing data...')
@@ -62,7 +63,8 @@ class ELASTICSEARCHHANDLER:
 
         try:
             bulk(self.es_client, self.requests)
-        except:
+        except Exception as error:
+            print(error)
             print('Error in Indexing Data. Bulk Error.')
             return
         else:
@@ -72,5 +74,6 @@ class ELASTICSEARCHHANDLER:
             self.es_client.indices.refresh(index=self.index_name)
 
     def delete_index(self):
+        print('Deleting Index...')
         resp = self.es_client.indices.delete(index=self.index_name, ignore_unavailable=True)
         return resp
