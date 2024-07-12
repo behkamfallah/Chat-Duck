@@ -7,6 +7,7 @@ from document_loader import LoadDocument
 from chunker import ChunkData
 from light_model import pc_client
 
+
 # Load PDF
 data = LoadDocument(path="../data/HY-TTC_500_IO_Driver_Manual_V3.4.1.pdf", unstructured=False).load()
 
