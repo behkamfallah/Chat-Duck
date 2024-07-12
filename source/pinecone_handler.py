@@ -50,7 +50,7 @@ class PineconeHandler:
         print('Retrieving related chunks...')
         retrieved_docs = self.pc_client.Index(self.index_name).query(
             vector=self.embedding_model.embed_query(query),
-            top_k=8,
+            top_k=10,
             include_values=True,
             include_metadata=True
         )
