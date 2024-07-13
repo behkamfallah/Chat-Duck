@@ -4,7 +4,6 @@ import light_model
 from light_model import pc_client
 
 # Show title and description.
-st.logo(image='../logo/logo.png', link=None, icon_image=None)
 st.title("💬HYDAC-GPT")
 st.write(
     "Welcome to HYDAC-GPT! Ask any technical question!"
