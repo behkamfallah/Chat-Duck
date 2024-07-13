@@ -28,9 +28,7 @@ PINECONE_API_KEY='...'
 This repository has three main folders:
 1. ```./data``` is the folder you should put your pdf file there.
 
-2. ```./logo``` is the folder related to Streamlit and the logos related to app are there.
-
-3. ```./source``` is the folder that consists of ```.py``` files.
+2. ```./source``` is the folder that consists of ```.py``` files.
 This folder has these python files with these usages:
    1. To insert data to databases, use these files:
       
