@@ -48,4 +48,5 @@ This folder has these python files with these usages:
    7. ```unstructured_io_handler.py``` handles the connection and getting results from the 'Unstructured.io' servers.
    8. ```light_model.py``` has the chain related to Light Model.
    9. ```enterprise_model.py``` has the chain related to Enterprise Model.
+   10. ```test_synthetic_data.py``` is for testing the app via benchmarks. If you want to run this file, remember to change context window of light model and use ```enterprise_model_for_test.py``` instead of ```enterprise_model.py```.
 
