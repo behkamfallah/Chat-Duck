@@ -12,3 +12,8 @@ langchain-elasticsearch
 elasticsearch
 streamlit
 unstructured-client
+datasets
+evaluate
+numpy
+datasets
+matplotlib

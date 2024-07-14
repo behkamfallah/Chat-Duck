@@ -39,6 +39,7 @@ Question: "{q}"
 Answer:
 """
 
+
 prompt = PromptTemplate(
     input_variables=['context', 'q'],
     template=template

@@ -27,7 +27,8 @@ class ELASTICSEARCHHANDLER:
                     "properties": {
                         self.text_field: {"type": "text"},
                         self.dense_vector_field: {"type": "dense_vector",
-                                                  "similarity": "cosine"},
+                                                  "similarity": "cosine",
+                                                  "dims": 1536},
                         self.metadata: {
                             "properties": {
                                 "source": {"type": "text"},

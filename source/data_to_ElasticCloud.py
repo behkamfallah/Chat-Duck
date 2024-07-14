@@ -9,7 +9,7 @@ from elasticsearchhandler import ELASTICSEARCHHANDLER
 from enterprise_model import es_client, index_name, embedding_model, text_field_name, dense_vector_field, metadata_name
 
 # Load PDF, remember to put unstructured as True because later we will pass this document to 'unstructured'.
-data = LoadDocument(path="../data/HY-TTC_500_IO_Driver_Manual_V3.4.1.pdf", unstructured=True).load()
+data = LoadDocument(path="../data/context.pdf", unstructured=True).load()
 
 # Create client for Unstructured
 un_client = UNSTRUCTURED()

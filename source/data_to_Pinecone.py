@@ -9,7 +9,7 @@ from light_model import pc_client
 
 
 # Load PDF
-data = LoadDocument(path="../data/HY-TTC_500_IO_Driver_Manual_V3.4.1.pdf", unstructured=False).load()
+data = LoadDocument(path="../data/context.pdf", unstructured=False).load()
 
 # Chunk the data you have loaded.
 chunks = ChunkData(data, chunk_size=512, chunk_overlap=128).get_splits()
