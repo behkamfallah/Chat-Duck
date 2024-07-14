@@ -11,6 +11,10 @@ You can run this code from terminal:
 !pip install -r requirements.txt
 ```
 
+
+If you get "recursive_guard" error while running the code, try using python 3.11.
+
+
 If you would like to fork the repository be sure that create an .env file in the ./source and put the API keys in it.
 These APIs will be needed if you would like to fully operate this code:
 ```py
