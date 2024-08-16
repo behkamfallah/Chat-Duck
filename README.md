@@ -1,7 +1,7 @@
 ### About the Project
 Chat with your PDF
 
-This repository is a 'Chat-with-your-PDF' project using two different implementations, namely Light and Enterprise.
+This repository is a 'Chat-with-your-PDF' project using two different implementations, namely Light and Enterprise. Me and @Pardis-Rahbarsooreh have worked on this project.
 
 
 ### Prerequisites
